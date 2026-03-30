@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import BreakModal from '../components/BreakModal'
-import BreakScreen from '../components/BreakScreen'
-import CalendarView from '../components/CalendarView'
-import { useAuth } from '../context/AuthContext'
+import { useEffect, useRef, useState } from 'react';
+import BreakModal from '../components/BreakModal';
+import BreakScreen from '../components/BreakScreen';
+import CalendarView from '../components/CalendarView';
+import WeatherEffects from '../components/WeatherEffects'; // Klasör yapına göre import
+import { useAuth } from '../context/AuthContext';
 import {
   initDaily,
   startSession,
   stopSession,
   syncRunningSession,
   todayKey,
-} from '../utils/firestore'
+} from '../utils/firestore';
 import {
   BREAK_SECS,
   DONE_MESSAGES,
@@ -20,8 +21,38 @@ import {
   SNOOZE_SECS,
   START_MESSAGES,
   TARGETS,
-} from '../utils/helpers'
-import { initAudio, playBell, playStart, playStop, playSuccess } from '../utils/sounds'
+} from '../utils/helpers';
+import { initAudio, playBell, playStart, playStop, playSuccess } from '../utils/sounds';
+
+// --- Hava Durumu Yardımcıları ---
+function useWeather() {
+  const [weather, setWeather] = useState(null)
+  useEffect(() => {
+    const API_KEY = import.meta.env.VITE_WEATHER_API_KEY
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const { latitude: lat, longitude: lon } = pos.coords
+        const res = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
+        )
+        const data = await res.json()
+        if (data.weather) setWeather(data.weather[0].main)
+      } catch (err) {
+        console.error('Hava durumu alınamadı:', err)
+      }
+    })
+  }, [])
+  return weather
+}
+
+function getTimeOfDay() {
+  const hour = new Date().getHours()
+  if (hour >= 6 && hour < 12) return 'morning'
+  if (hour >= 12 && hour < 18) return 'day'
+  if (hour >= 18 && hour < 22) return 'evening'
+  return 'night'
+}
+// --------------------------------
 
 const ST = { IDLE: 'idle', RUNNING: 'running', BREAK: 'break' }
 const SYNC_EVERY_MS = 2000
@@ -31,6 +62,10 @@ export default function StudentDashboard() {
   const greeting = getGreeting()
   const motivMsg = useRef(pick(START_MESSAGES)).current
   const doneMsg = useRef(pick(DONE_MESSAGES)).current
+
+  // Hava durumu state'leri
+  const weather = useWeather()
+  const timeOfDay = getTimeOfDay()
 
   const [mode, setMode] = useState(ST.IDLE)
   const [secs, setSecs] = useState(0)
@@ -309,6 +344,9 @@ export default function StudentDashboard() {
 
   return (
     <div style={S.page}>
+      {/* Hava Durumu Efektleri - En Arkada */}
+      <WeatherEffects weather={weather} time={timeOfDay} />
+
       <div style={S.blob1} />
       <div style={S.blob2} />
       {confetti && <Confetti />}
