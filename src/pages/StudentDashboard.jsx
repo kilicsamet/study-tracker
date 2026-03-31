@@ -394,32 +394,33 @@ export default function StudentDashboard() {
       <div style={S.blob2} />
       {confetti && <Confetti />}
 
-     <header style={S.header}>
-      {/* ÜST SATIR */}
-      <div style={S.headerTop}>
-        <div style={S.greetWrap}>
-          <img src="/images/image.png" alt="Profil" style={S.avatar} />
-          <div>
-            <div style={S.greetText}>{greeting.text}</div>
-            <div style={S.greetSub}>{greeting.sub}</div>
-          </div>
-        </div>
-
-        <div style={S.headerRight}>
-          <button style={S.calBtn} onClick={() => setShowCal((s) => !s)}>
-            {showCal ? '✕ Kapat' : '📅 Takvim'}
-          </button>
-          <button style={S.logoutBtn} onClick={handleLogout}>
-            Çıkış
-          </button>
-        </div>
+<header style={S.header}>
+  <div style={S.headerTop}>
+ 
+    {/* Sol: avatar + selamlama */}
+    <div style={S.greetWrap}>
+      <img src="/images/image.png" alt="Profil" style={S.avatar} />
+      <div>
+        <div style={S.greetText}>{greeting.text}</div>
+        <div style={S.greetSub}>{greeting.sub}</div>
       </div>
-
-      {/* ALT SATIR */}
-      <div style={S.headerBottom}>
-        <KpssCountdown />
-      </div>
-    </header>
+    </div>
+ 
+    {/* Orta: KPSS countdown şeridi */}
+    <KpssCountdown />
+ 
+    {/* Sağ: butonlar */}
+    <div style={S.headerRight}>
+      <button style={S.calBtn} onClick={() => setShowCal(s => !s)}>
+        {showCal ? '✕ Kapat' : '📅 Takvim'}
+      </button>
+      <button style={S.logoutBtn} onClick={handleLogout}>
+        Çıkış
+      </button>
+    </div>
+ 
+  </div>
+</header>
 
       <main style={S.main}>
         {showCal && (
@@ -750,17 +751,24 @@ const S = {
   },
 
 header: {
-  display: 'flex',
-  flexDirection: 'column',
-  padding: '14px 20px',
-  borderBottom: '1px solid var(--border)',
-  background: 'rgba(15,12,26,.85)',
+  display:        'flex',
+  flexDirection:  'column',
+  padding:        '12px 20px',
+  borderBottom:   '1px solid var(--border)',
+  background:     'rgba(15,12,26,.85)',
   backdropFilter: 'blur(20px)',
-  position: 'sticky',
-  top: 0,
-  zIndex: 200,
-  gap: '10px',
+  position:       'sticky',
+  top:            0,
+  zIndex:         200,
 },
+ 
+headerTop: {
+  display:        'flex',
+  alignItems:     'center',
+  justifyContent: 'space-between',
+  gap:            '12px',
+},
+ 
 
   greetWrap: { display: 'flex', alignItems: 'center', gap: '10px' },
   greetEmoji: { fontSize: '26px' },
@@ -1016,12 +1024,6 @@ header: {
   boxShadow: '0 0 0 3px var(--rose-dim)',
   flexShrink: 0,
 },
-headerTop: {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-},
-
 headerBottom: {
   width: '100%',
 },
