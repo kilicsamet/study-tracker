@@ -26,15 +26,25 @@ function dailyRef(key) {
   return doc(db, 'daily', key)
 }
 
+function buildRunningTotal(data) {
+  if (!data?.activeSession?.startedAt) {
+    return data?.totalSeconds || 0
+  }
+
+  const startedAt = data.activeSession.startedAt.toDate()
+  const baseTotalSeconds = data.activeSession.baseTotalSeconds ?? data.totalSeconds ?? 0
+  const elapsed = Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000))
+
+  return baseTotalSeconds + elapsed
+}
+
 /**
  * Günlük kayıt yoksa oluşturur.
  * Varsa döner.
  *
  * Eğer açık kalmış activeSession varsa:
- * - kapalı geçen süreyi EKLEMEZ
+ * - arka planda geçen süreyi EKLEMEZ
  * - sadece activeSession'ı temizler
- *
- * Böylece tarayıcı kapanınca zaman arka planda işlemez.
  */
 export async function initDaily(key) {
   const ref = dailyRef(key)
@@ -49,6 +59,8 @@ export async function initDaily(key) {
       done: false,
       sessions: [],
       activeSession: null,
+      dailyNote: '',
+      dailyNoteCreatedAt: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
@@ -111,6 +123,8 @@ export async function setDayTarget(key, targetType) {
       done: false,
       sessions: [],
       activeSession: null,
+      dailyNote: '',
+      dailyNoteCreatedAt: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
@@ -133,7 +147,10 @@ export async function startSession(key) {
       sessions: [],
       activeSession: {
         startedAt: Timestamp.now(),
+        baseTotalSeconds: 0,
       },
+      dailyNote: '',
+      dailyNoteCreatedAt: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
@@ -147,9 +164,12 @@ export async function startSession(key) {
     return data
   }
 
+  const baseTotalSeconds = data.totalSeconds || 0
+
   await updateDoc(ref, {
     activeSession: {
       startedAt: Timestamp.now(),
+      baseTotalSeconds,
     },
     updatedAt: serverTimestamp(),
   })
@@ -157,16 +177,6 @@ export async function startSession(key) {
   return await getDaily(key)
 }
 
-/**
- * Çalışan session'ı periyodik olarak Firestore'a yazar.
- * Mantık:
- * - activeSession.startedAt -> son sync başlangıcı
- * - elapsed hesaplanır
- * - totalSeconds içine eklenir
- * - activeSession.startedAt "şimdi" olarak resetlenir
- *
- * Böylece sekme kapanırsa en fazla son sync aralığı kadar veri kaybı olur.
- */
 export async function syncRunningSession(key) {
   const ref = dailyRef(key)
   const snap = await getDoc(ref)
@@ -179,23 +189,12 @@ export async function syncRunningSession(key) {
     return data
   }
 
-  const started = data.activeSession.startedAt.toDate()
-  const now = Date.now()
-  const elapsed = Math.max(0, Math.floor((now - started.getTime()) / 1000))
-
-  if (elapsed <= 0) {
-    return data
-  }
-
-  const newTotal = (data.totalSeconds || 0) + elapsed
+  const newTotal = buildRunningTotal(data)
   const target = data.target ?? TARGET_FULL
 
   await updateDoc(ref, {
     totalSeconds: newTotal,
     done: target > 0 ? newTotal >= target : false,
-    activeSession: {
-      startedAt: Timestamp.now(),
-    },
     updatedAt: serverTimestamp(),
   })
 
@@ -214,15 +213,17 @@ export async function stopSession(key) {
     return data.totalSeconds || 0
   }
 
-  const started = data.activeSession.startedAt.toDate()
-  const elapsed = Math.max(0, Math.floor((Date.now() - started.getTime()) / 1000))
-  const newTotal = (data.totalSeconds || 0) + elapsed
+  const startedAtTs = data.activeSession.startedAt
+  const startedAt = startedAtTs.toDate()
+  const baseTotalSeconds = data.activeSession.baseTotalSeconds ?? data.totalSeconds ?? 0
+  const elapsed = Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000))
+  const newTotal = baseTotalSeconds + elapsed
   const target = data.target ?? TARGET_FULL
 
   const sessions = [
     ...(data.sessions || []),
     {
-      startedAt: data.activeSession.startedAt,
+      startedAt: startedAtTs,
       endedAt: Timestamp.now(),
       duration: elapsed,
     },
@@ -239,18 +240,45 @@ export async function stopSession(key) {
   return newTotal
 }
 
+export async function saveDailyNote(key, note) {
+  const ref = dailyRef(key)
+  const snap = await getDoc(ref)
+
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      date: key,
+      totalSeconds: 0,
+      targetType: DEFAULT_TARGET,
+      target: TARGETS[DEFAULT_TARGET].seconds,
+      done: false,
+      sessions: [],
+      activeSession: null,
+      dailyNote: note,
+      dailyNoteCreatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    return await getDaily(key)
+  }
+
+  const data = snap.data()
+
+  if (data?.dailyNote && String(data.dailyNote).trim() !== '') {
+    return data
+  }
+
+  await updateDoc(ref, {
+    dailyNote: note,
+    dailyNoteCreatedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+
+  return await getDaily(key)
+}
+
 export function liveTotal(data) {
   if (!data) return 0
-
-  const base = data.totalSeconds || 0
-
-  if (!data.activeSession?.startedAt) return base
-
-  const elapsed = Math.floor(
-    (Date.now() - data.activeSession.startedAt.toDate().getTime()) / 1000
-  )
-
-  return base + Math.max(0, elapsed)
+  return buildRunningTotal(data)
 }
 
 export async function getAllDays() {
