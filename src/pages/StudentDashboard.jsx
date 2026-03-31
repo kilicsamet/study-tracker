@@ -394,20 +394,16 @@ export default function StudentDashboard() {
       <div style={S.blob2} />
       {confetti && <Confetti />}
 
-      <header style={S.header}>
+     <header style={S.header}>
+      {/* ÜST SATIR */}
+      <div style={S.headerTop}>
         <div style={S.greetWrap}>
-  <img
-    src="/images/image.png"
-    alt="Profil"
-    style={S.avatar}
-  />
-  <div>
-    <div style={S.greetText}>{greeting.text}</div>
-    <div style={S.greetSub}>{greeting.sub}</div>
-  </div>
-</div>
-
-        <KpssCountdown />
+          <img src="/images/image.png" alt="Profil" style={S.avatar} />
+          <div>
+            <div style={S.greetText}>{greeting.text}</div>
+            <div style={S.greetSub}>{greeting.sub}</div>
+          </div>
+        </div>
 
         <div style={S.headerRight}>
           <button style={S.calBtn} onClick={() => setShowCal((s) => !s)}>
@@ -417,7 +413,13 @@ export default function StudentDashboard() {
             Çıkış
           </button>
         </div>
-      </header>
+      </div>
+
+      {/* ALT SATIR */}
+      <div style={S.headerBottom}>
+        <KpssCountdown />
+      </div>
+    </header>
 
       <main style={S.main}>
         {showCal && (
@@ -747,26 +749,23 @@ const S = {
     pointerEvents: 'none',
   },
 
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '14px 20px',
-    borderBottom: '1px solid var(--border)',
-    background: 'rgba(15,12,26,.85)',
-    backdropFilter: 'blur(20px)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 200,
-    flexWrap: 'wrap',
-    gap: '10px',
-  },
+header: {
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '14px 20px',
+  borderBottom: '1px solid var(--border)',
+  background: 'rgba(15,12,26,.85)',
+  backdropFilter: 'blur(20px)',
+  position: 'sticky',
+  top: 0,
+  zIndex: 200,
+  gap: '10px',
+},
 
   greetWrap: { display: 'flex', alignItems: 'center', gap: '10px' },
   greetEmoji: { fontSize: '26px' },
   greetText: { fontSize: '15px', fontWeight: '700', color: 'var(--text)' },
   greetSub: { fontSize: '12px', color: 'var(--text2)', marginTop: '1px' },
-  headerRight: { display: 'flex', gap: '8px' },
 
   calBtn: {
     background: 'var(--rose-dim)',
@@ -1016,5 +1015,19 @@ const S = {
   border: '2px solid var(--rose)',
   boxShadow: '0 0 0 3px var(--rose-dim)',
   flexShrink: 0,
+},
+headerTop: {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+},
+
+headerBottom: {
+  width: '100%',
+},
+
+headerRight: {
+  display: 'flex',
+  gap: '8px',
 },
 }
