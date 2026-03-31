@@ -1,23 +1,44 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 
 export default function useWeather() {
-  const [weather, setWeather] = useState(null);
+  const [weather, setWeather] = useState(null)
 
   useEffect(() => {
-    const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
+    const API_KEY = import.meta.env.VITE_WEATHER_API_KEY || 'd782fbd485b680afa89e78f9ed9d9369'
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const lat = pos.coords.latitude;
-      const lon = pos.coords.longitude;
+    async function fetchByCoords(lat, lon) {
+      try {
+        const res = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
+        )
+        if (!res.ok) { console.error('Weather API HTTP hatası:', res.status); return }
+        const data = await res.json()
+        if (data?.weather?.[0]?.main) {
+          setWeather(data.weather[0].main)
+        } else {
+          console.error('Weather API beklenmedik yanıt:', data)
+        }
+      } catch (err) {
+        console.error('Hava durumu fetch hatası:', err)
+      }
+    }
 
-      const res = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
-      );
+    if (!navigator.geolocation) {
+      // Geolocation yoksa İstanbul ile fallback
+      fetchByCoords(41.015, 28.979)
+      return
+    }
 
-      const data = await res.json();
-      setWeather(data.weather[0].main);
-    });
-  }, []);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => fetchByCoords(pos.coords.latitude, pos.coords.longitude),
+      (err) => {
+        // İzin reddedildi veya timeout → İstanbul fallback
+        console.warn('Konum alınamadı, İstanbul kullanılıyor:', err.message)
+        fetchByCoords(41.015, 28.979)
+      },
+      { timeout: 8000, maximumAge: 300_000 }
+    )
+  }, [])
 
-  return weather;
+  return weather
 }
