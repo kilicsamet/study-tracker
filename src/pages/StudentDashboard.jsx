@@ -40,7 +40,7 @@ function getTimeOfDay() {
 }
 
 const ST = { IDLE: 'idle', RUNNING: 'running', BREAK: 'break' }
-const SYNC_EVERY_MS = 30_000
+const SYNC_EVERY_MS = 10_000
 
 export default function StudentDashboard() {
   const { logout } = useAuth()
@@ -174,7 +174,11 @@ export default function StudentDashboard() {
 
     syncingRef.current = true
     try {
-      await syncRunningSession(dateKey)
+      const fresh = await syncRunningSession(dateKey)
+      // ✅ runningRef'i tazele — baseTotalSeconds kaymasın
+      if (fresh) {
+        setRunningFromDoc(fresh)
+      }
     } catch (err) {
       console.error('syncRunningSession error:', err)
     } finally {
@@ -394,33 +398,28 @@ export default function StudentDashboard() {
       <div style={S.blob2} />
       {confetti && <Confetti />}
 
-<header style={S.header}>
-  <div style={S.headerTop}>
- 
-    {/* Sol: avatar + selamlama */}
-    <div style={S.greetWrap}>
-      <img src="/images/image.png" alt="Profil" style={S.avatar} />
-      <div>
-        <div style={S.greetText}>{greeting.text}</div>
-        <div style={S.greetSub}>{greeting.sub}</div>
-      </div>
-    </div>
- 
-    {/* Orta: KPSS countdown şeridi */}
-    <KpssCountdown />
- 
-    {/* Sağ: butonlar */}
-    <div style={S.headerRight}>
-      <button style={S.calBtn} onClick={() => setShowCal(s => !s)}>
-        {showCal ? '✕ Kapat' : '📅 Takvim'}
-      </button>
-      <button style={S.logoutBtn} onClick={handleLogout}>
-        Çıkış
-      </button>
-    </div>
- 
-  </div>
-</header>
+      <header style={S.header}>
+        <div style={S.headerTop}>
+          <div style={S.greetWrap}>
+            <img src="/images/image.png" alt="Profil" style={S.avatar} />
+            <div>
+              <div style={S.greetText}>{greeting.text}</div>
+              <div style={S.greetSub}>{greeting.sub}</div>
+            </div>
+          </div>
+
+          <KpssCountdown />
+
+          <div style={S.headerRight}>
+            <button style={S.calBtn} onClick={() => setShowCal(s => !s)}>
+              {showCal ? '✕ Kapat' : '📅 Takvim'}
+            </button>
+            <button style={S.logoutBtn} onClick={handleLogout}>
+              Çıkış
+            </button>
+          </div>
+        </div>
+      </header>
 
       <main style={S.main}>
         {showCal && (
@@ -750,25 +749,24 @@ const S = {
     pointerEvents: 'none',
   },
 
-header: {
-  display:        'flex',
-  flexDirection:  'column',
-  padding:        '12px 20px',
-  borderBottom:   '1px solid var(--border)',
-  background:     'rgba(15,12,26,.85)',
-  backdropFilter: 'blur(20px)',
-  position:       'sticky',
-  top:            0,
-  zIndex:         200,
-},
- 
-headerTop: {
-  display:        'flex',
-  alignItems:     'center',
-  justifyContent: 'space-between',
-  gap:            '12px',
-},
- 
+  header: {
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '12px 20px',
+    borderBottom: '1px solid var(--border)',
+    background: 'rgba(15,12,26,.85)',
+    backdropFilter: 'blur(20px)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 200,
+  },
+
+  headerTop: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+  },
 
   greetWrap: { display: 'flex', alignItems: 'center', gap: '10px' },
   greetEmoji: { fontSize: '26px' },
@@ -1015,21 +1013,23 @@ headerTop: {
     color: 'var(--text3)',
     whiteSpace: 'nowrap',
   },
-  avatar: {
-  width: '40px',
-  height: '40px',
-  borderRadius: '50%',
-  objectFit: 'cover',
-  border: '2px solid var(--rose)',
-  boxShadow: '0 0 0 3px var(--rose-dim)',
-  flexShrink: 0,
-},
-headerBottom: {
-  width: '100%',
-},
 
-headerRight: {
-  display: 'flex',
-  gap: '8px',
-},
+  avatar: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    objectFit: 'cover',
+    border: '2px solid var(--rose)',
+    boxShadow: '0 0 0 3px var(--rose-dim)',
+    flexShrink: 0,
+  },
+
+  headerBottom: {
+    width: '100%',
+  },
+
+  headerRight: {
+    display: 'flex',
+    gap: '8px',
+  },
 }

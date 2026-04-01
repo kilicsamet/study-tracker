@@ -38,14 +38,6 @@ function buildRunningTotal(data) {
   return baseTotalSeconds + elapsed
 }
 
-/**
- * Günlük kayıt yoksa oluşturur.
- * Varsa döner.
- *
- * Eğer açık kalmış activeSession varsa:
- * - arka planda geçen süreyi EKLEMEZ
- * - sadece activeSession'ı temizler
- */
 export async function initDaily(key) {
   const ref = dailyRef(key)
   const snap = await getDoc(ref)
@@ -76,14 +68,35 @@ export async function initDaily(key) {
   const data = snap.data()
 
   if (data.activeSession?.startedAt) {
+    const newTotal = buildRunningTotal(data)
+    const target = data.target ?? TARGET_FULL
+    const startedAtTs = data.activeSession.startedAt
+    const elapsed = Math.max(
+      0,
+      Math.floor((Date.now() - startedAtTs.toDate().getTime()) / 1000)
+    )
+    const sessions = [
+      ...(data.sessions || []),
+      {
+        startedAt: startedAtTs,
+        endedAt: Timestamp.now(),
+        duration: elapsed,
+      },
+    ]
+
     await updateDoc(ref, {
+      totalSeconds: newTotal,
+      done: target > 0 ? newTotal >= target : false,
       activeSession: null,
+      sessions,
       updatedAt: serverTimestamp(),
     })
 
     return {
       ...data,
+      totalSeconds: newTotal,
       activeSession: null,
+      sessions,
     }
   }
 
@@ -195,6 +208,7 @@ export async function syncRunningSession(key) {
   await updateDoc(ref, {
     totalSeconds: newTotal,
     done: target > 0 ? newTotal >= target : false,
+    'activeSession.baseTotalSeconds': newTotal,
     updatedAt: serverTimestamp(),
   })
 
