@@ -1,14 +1,14 @@
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  Timestamp,
-  updateDoc,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    orderBy,
+    query,
+    serverTimestamp,
+    setDoc,
+    Timestamp,
+    updateDoc,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { TARGET_FULL, TARGETS } from './helpers'

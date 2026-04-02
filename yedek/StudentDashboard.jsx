@@ -10,25 +10,25 @@ import { useAuth } from '../context/AuthContext'
 import useTheme from '../hooks/useTheme'
 import useWeather from '../hooks/useWeather'
 import {
-  getDaily,
-  initDaily,
-  rolloverIfNeeded,
-  saveDailyNote,
-  startSession,
-  stopSession,
-  syncRunningSession,
-  todayKey,
+    getDaily,
+    initDaily,
+    rolloverIfNeeded,
+    saveDailyNote,
+    startSession,
+    stopSession,
+    syncRunningSession,
+    todayKey,
 } from '../utils/firestore'
 import {
-  BREAK_SECS,
-  DONE_MESSAGES,
-  fmtHM,
-  fmtHMS,
-  getGreeting,
-  pick,
-  SNOOZE_SECS,
-  START_MESSAGES,
-  TARGETS,
+    BREAK_SECS,
+    DONE_MESSAGES,
+    fmtHM,
+    fmtHMS,
+    getGreeting,
+    pick,
+    SNOOZE_SECS,
+    START_MESSAGES,
+    TARGETS,
 } from '../utils/helpers'
 import { initAudio, playBell, playStart, playStop, playSuccess } from '../utils/sounds'
 
