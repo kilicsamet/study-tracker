@@ -1,23 +1,26 @@
 import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    orderBy,
-    query,
-    serverTimestamp,
-    setDoc,
-    Timestamp,
-    updateDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { TARGET_FULL, TARGETS } from './helpers'
 
 export const DEFAULT_TARGET = 'full'
 
-export function todayKey(date = new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
-    date.getDate()
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+export function todayKey() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
   ).padStart(2, '0')}`
 }
 
@@ -25,92 +28,137 @@ function dailyRef(key) {
   return doc(db, 'daily', key)
 }
 
-function buildRunningTotal(data) {
+/**
+ * Bir dokümanın o anki gerçek toplam süresini hesaplar.
+ * activeSession varsa elapsed'i base'e ekler.
+ * Gece yarısı geçişinde güvenli: elapsed max ile kesilir.
+ */
+function buildRunningTotal(data, capAt) {
   if (!data?.activeSession?.startedAt) {
     return data?.totalSeconds || 0
   }
 
   const startedAt = data.activeSession.startedAt.toDate()
   const baseTotalSeconds = data.activeSession.baseTotalSeconds ?? data.totalSeconds ?? 0
-  const elapsed = Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000))
+
+  // capAt: gece yarısı geçişinde o günün 23:59:59'una kadar say
+  const now = capAt ? capAt.getTime() : Date.now()
+  const elapsed = Math.max(0, Math.floor((now - startedAt.getTime()) / 1000))
 
   return baseTotalSeconds + elapsed
 }
 
-async function createDailyIfMissing(key) {
-  const ref = dailyRef(key)
-  const snap = await getDoc(ref)
+/**
+ * Verilen doküman verisini kapatır (activeSession → null, totalSeconds yazar).
+ * Hem initDaily hem de gece geçişi için kullanılır.
+ * capAt: o günün son anı (gece geçişinde dünü doğru kapatmak için)
+ */
+async function closeActiveSession(ref, data, capAt) {
+  const startedAtTs = data.activeSession.startedAt
+  const startedAt = startedAtTs.toDate()
+  const baseTotalSeconds = data.activeSession.baseTotalSeconds ?? data.totalSeconds ?? 0
 
-  if (snap.exists()) return snap.data()
+  const now = capAt ? capAt.getTime() : Date.now()
+  const elapsed = Math.max(0, Math.floor((now - startedAt.getTime()) / 1000))
+  const newTotal = baseTotalSeconds + elapsed
+  const target = data.target ?? TARGET_FULL
 
-  const d = {
-    date: key,
-    totalSeconds: 0,
-    targetType: DEFAULT_TARGET,
-    target: TARGETS[DEFAULT_TARGET].seconds,
-    done: false,
-    sessions: [],
+  const sessions = [
+    ...(data.sessions || []),
+    {
+      startedAt: startedAtTs,
+      endedAt: Timestamp.fromMillis(now),
+      duration: elapsed,
+    },
+  ]
+
+  await updateDoc(ref, {
+    totalSeconds: newTotal,
+    done: target > 0 ? newTotal >= target : false,
     activeSession: null,
-    dailyNote: '',
-    dailyNoteCreatedAt: null,
-    createdAt: serverTimestamp(),
+    sessions,
     updatedAt: serverTimestamp(),
+  })
+
+  return { ...data, totalSeconds: newTotal, activeSession: null, sessions }
+}
+
+// ─── Gece Geçişi ─────────────────────────────────────────────────────────────
+
+/**
+ * Sayfa açılırken VEYA dateKey değişince çağrılır.
+ * Dün (veya daha eski) açık kalan session'ları bulup kapatır.
+ * Sadece öğrenci tarafından çağrılmalı.
+ */
+export async function closeStaleSessions(currentKey) {
+  // Son 3 günü kontrol et (sayfa kapalı kalma ihtimaline karşı)
+  const keys = []
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    keys.push(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    )
   }
 
-  await setDoc(ref, d)
-  return {
-    ...d,
-    target: TARGETS[DEFAULT_TARGET].seconds,
+  for (const key of keys) {
+    if (key === currentKey) continue
+
+    const ref = dailyRef(key)
+    const snap = await getDoc(ref)
+
+    if (!snap.exists()) continue
+
+    const data = snap.data()
+
+    if (!data.activeSession?.startedAt) continue
+
+    // O günün gece 23:59:59'unu cap olarak ver
+    const [y, m, day] = key.split('-').map(Number)
+    const endOfDay = new Date(y, m - 1, day, 23, 59, 59, 999)
+
+    await closeActiveSession(ref, data, endOfDay)
   }
 }
 
+// ─── initDaily ───────────────────────────────────────────────────────────────
+
+/**
+ * Bugünün dokümanını başlatır / varsa döndürür.
+ * Eğer BUGÜNÜN dokümanında açık session varsa → canlı çalışıyor demektir,
+ * KAPATMAZ, olduğu gibi döndürür. (Admin bug'ı düzeltildi)
+ *
+ * Eski günlerin açık session'larını kapatmak için closeStaleSession kullan.
+ */
 export async function initDaily(key) {
   const ref = dailyRef(key)
   const snap = await getDoc(ref)
 
   if (!snap.exists()) {
-    return await createDailyIfMissing(key)
-  }
-
-  const data = snap.data()
-
-  if (data.activeSession?.startedAt) {
-    const newTotal = buildRunningTotal(data)
-    const target = data.target ?? TARGET_FULL
-    const startedAtTs = data.activeSession.startedAt
-    const elapsed = Math.max(
-      0,
-      Math.floor((Date.now() - startedAtTs.toDate().getTime()) / 1000)
-    )
-
-    const sessions = [
-      ...(data.sessions || []),
-      {
-        startedAt: startedAtTs,
-        endedAt: Timestamp.now(),
-        duration: elapsed,
-      },
-    ]
-
-    await updateDoc(ref, {
-      totalSeconds: newTotal,
-      done: target > 0 ? newTotal >= target : false,
+    const d = {
+      date: key,
+      totalSeconds: 0,
+      targetType: DEFAULT_TARGET,
+      target: TARGETS[DEFAULT_TARGET].seconds,
+      done: false,
+      sessions: [],
       activeSession: null,
-      sessions,
+      dailyNote: '',
+      dailyNoteCreatedAt: null,
+      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    })
-
-    return {
-      ...data,
-      totalSeconds: newTotal,
-      activeSession: null,
-      sessions,
     }
+
+    await setDoc(ref, d)
+    return d
   }
 
-  return data
+  return snap.data()
 }
 
+/**
+ * Admin tarafı için: sadece dökümanı oluştur/getir, asla session kapatma.
+ */
 export async function ensureDaily(key) {
   return await initDaily(key)
 }
@@ -121,6 +169,8 @@ export async function getDaily(key) {
   return snap.data()
 }
 
+// ─── Target ──────────────────────────────────────────────────────────────────
+
 export async function setDayTarget(key, targetType) {
   const ref = dailyRef(key)
   const snap = await getDoc(ref)
@@ -128,11 +178,12 @@ export async function setDayTarget(key, targetType) {
 
   if (snap.exists()) {
     const current = snap.data()
+    const currentTotal = current.totalSeconds || 0
 
     await updateDoc(ref, {
       targetType,
       target,
-      done: target > 0 ? (current.totalSeconds || 0) >= target : false,
+      done: target > 0 ? currentTotal >= target : false,
       updatedAt: serverTimestamp(),
     })
   } else {
@@ -153,6 +204,8 @@ export async function setDayTarget(key, targetType) {
 
   return await getDaily(key)
 }
+
+// ─── Session ─────────────────────────────────────────────────────────────────
 
 export async function startSession(key) {
   const ref = dailyRef(key)
@@ -181,6 +234,7 @@ export async function startSession(key) {
 
   const data = snap.data()
 
+  // Zaten aktif session var, tekrar başlatma
   if (data.activeSession?.startedAt) {
     return data
   }
@@ -198,6 +252,11 @@ export async function startSession(key) {
   return await getDaily(key)
 }
 
+/**
+ * Çalışan session'ı durdurmadan checkpoint alır.
+ * startedAt sıfırlanır, baseTotalSeconds güncellenir.
+ * Böylece elapsed bir sonraki sync'te sıfırdan sayılır → double-count yok.
+ */
 export async function syncRunningSession(key) {
   const ref = dailyRef(key)
   const snap = await getDoc(ref)
@@ -217,7 +276,7 @@ export async function syncRunningSession(key) {
     totalSeconds: newTotal,
     done: target > 0 ? newTotal >= target : false,
     activeSession: {
-      startedAt: Timestamp.now(),
+      startedAt: Timestamp.now(), // sıfırla — elapsed bir daha eklenmez
       baseTotalSeconds: newTotal,
     },
     updatedAt: serverTimestamp(),
@@ -238,94 +297,11 @@ export async function stopSession(key) {
     return data.totalSeconds || 0
   }
 
-  const startedAtTs = data.activeSession.startedAt
-  const startedAt = startedAtTs.toDate()
-  const baseTotalSeconds = data.activeSession.baseTotalSeconds ?? data.totalSeconds ?? 0
-  const elapsed = Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000))
-  const newTotal = baseTotalSeconds + elapsed
-  const target = data.target ?? TARGET_FULL
-
-  const sessions = [
-    ...(data.sessions || []),
-    {
-      startedAt: startedAtTs,
-      endedAt: Timestamp.now(),
-      duration: elapsed,
-    },
-  ]
-
-  await updateDoc(ref, {
-    totalSeconds: newTotal,
-    done: target > 0 ? newTotal >= target : false,
-    activeSession: null,
-    sessions,
-    updatedAt: serverTimestamp(),
-  })
-
-  return newTotal
+  const closed = await closeActiveSession(ref, data, null)
+  return closed.totalSeconds
 }
 
-/**
- * Gece yeni güne geçildiyse:
- * - eski günün aktif session'ını kapatır
- * - yeni gün dokümanını oluşturur
- * - isterse yeni güne aktif session başlatır
- */
-export async function rolloverIfNeeded(currentKey, nextKey, shouldResume = true) {
-  if (!currentKey || !nextKey || currentKey === nextKey) {
-    return {
-      rolled: false,
-      nextDay: currentKey ? await ensureDaily(currentKey) : null,
-    }
-  }
-
-  const currentRef = dailyRef(currentKey)
-  const currentSnap = await getDoc(currentRef)
-
-  if (currentSnap.exists()) {
-    const currentData = currentSnap.data()
-
-    if (currentData?.activeSession?.startedAt) {
-      const startedAtTs = currentData.activeSession.startedAt
-      const startedAt = startedAtTs.toDate()
-      const baseTotalSeconds =
-        currentData.activeSession.baseTotalSeconds ?? currentData.totalSeconds ?? 0
-      const elapsed = Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000))
-      const newTotal = baseTotalSeconds + elapsed
-      const target = currentData.target ?? TARGET_FULL
-
-      const sessions = [
-        ...(currentData.sessions || []),
-        {
-          startedAt: startedAtTs,
-          endedAt: Timestamp.now(),
-          duration: elapsed,
-        },
-      ]
-
-      await updateDoc(currentRef, {
-        totalSeconds: newTotal,
-        done: target > 0 ? newTotal >= target : false,
-        activeSession: null,
-        sessions,
-        updatedAt: serverTimestamp(),
-      })
-    }
-  }
-
-  await createDailyIfMissing(nextKey)
-
-  let nextDay = await getDaily(nextKey)
-
-  if (shouldResume && nextDay && !nextDay.activeSession?.startedAt && nextDay.targetType !== 'holiday') {
-    nextDay = await startSession(nextKey)
-  }
-
-  return {
-    rolled: true,
-    nextDay,
-  }
-}
+// ─── Daily Note ──────────────────────────────────────────────────────────────
 
 export async function saveDailyNote(key, note) {
   const ref = dailyRef(key)
@@ -350,6 +326,7 @@ export async function saveDailyNote(key, note) {
 
   const data = snap.data()
 
+  // Not zaten varsa üzerine yazma
   if (data?.dailyNote && String(data.dailyNote).trim() !== '') {
     return data
   }
@@ -363,13 +340,36 @@ export async function saveDailyNote(key, note) {
   return await getDaily(key)
 }
 
-export function liveTotal(data) {
-  if (!data) return 0
-  return buildRunningTotal(data)
-}
+// ─── Admin ───────────────────────────────────────────────────────────────────
 
+/**
+ * Tüm günleri getirir.
+ * Aktif session olan günler için live total hesaplanır.
+ * Admin paneli doğru değerleri görmüş olur.
+ */
 export async function getAllDays() {
   const q = query(collection(db, 'daily'), orderBy('date', 'desc'))
   const snap = await getDocs(q)
-  return snap.docs.map((d) => d.data())
+
+  return snap.docs.map((d) => {
+    const data = d.data()
+
+    // Aktif session varsa live total hesapla (admin doğru görsün)
+    if (data.activeSession?.startedAt) {
+      const liveTotal = buildRunningTotal(data)
+      const target = data.target ?? TARGET_FULL
+      return {
+        ...data,
+        totalSeconds: liveTotal,
+        done: target > 0 ? liveTotal >= target : false,
+      }
+    }
+
+    return data
+  })
+}
+
+export function liveTotal(data) {
+  if (!data) return 0
+  return buildRunningTotal(data)
 }
