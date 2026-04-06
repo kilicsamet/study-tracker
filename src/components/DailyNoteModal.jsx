@@ -33,12 +33,12 @@ export default function DailyNoteModal({ open, onClose, onSave, saving = false }
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Bugün kendimle gurur duydum..."
-            maxLength={240}
+            maxLength={700}
             style={S.textarea}
           />
 
           <div style={S.footer}>
-            <span style={S.counter}>{trimmed.length}/240</span>
+            <span style={S.counter}>{trimmed.length}/700</span>
 
             <div style={S.actions}>
               <button
@@ -79,7 +79,7 @@ const S = {
   },
   modal: {
     width: '100%',
-    maxWidth: '520px',
+    maxWidth: '720px',
     background: 'var(--surface)',
     border: '1px solid var(--border2)',
     borderRadius: '24px',
@@ -117,7 +117,7 @@ const S = {
   },
   textarea: {
     width: '100%',
-    minHeight: '140px',
+    minHeight: '360px',
     resize: 'vertical',
     borderRadius: '16px',
     border: '1px solid var(--border2)',

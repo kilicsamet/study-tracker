@@ -25,14 +25,20 @@ export default function WeatherEffects({ weather, time }) {
   return (
     <>
       {time === 'night' && <NightStars />}
-      {weather === 'Clear'        && <Sun time={time} />}
-      {weather === 'Clouds'       && <Clouds />}
-      {weather === 'Rain'         && <Rain />}
-      {weather === 'Drizzle'      && <Rain light />}
-      {weather === 'Snow'         && <Snow />}
+      {weather === 'Clear' && time !== 'evening' && time !== 'night' && <Sun time={time} />}
+      {weather === 'Clouds' && <Clouds />}
+      {weather === 'Rain' && <Rain />}
+      {weather === 'Drizzle' && <Rain light />}
+      {weather === 'Snow' && <Snow />}
       {weather === 'Thunderstorm' && <><Rain heavy /><Lightning /></>}
-      {weather === 'Mist'         && <Mist />}
-      {weather === 'Fog'          && <Mist dense />}
+      {weather === 'Mist' && <Mist />}
+      {weather === 'Fog' && <Mist dense />}
+      {weather === 'Haze' && <Mist />}
+      {weather === 'Dust' && <Mist dense />}
+      {weather === 'Sand' && <Mist dense />}
+      {weather === 'Ash' && <Mist dense />}
+      {weather === 'Squall' && <Rain heavy />}
+      {weather === 'Tornado' && <><Rain heavy /><Wind weather="Tornado" /></>}
       <Wind weather={weather} />
     </>
   )

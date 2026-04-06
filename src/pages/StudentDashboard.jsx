@@ -36,11 +36,10 @@ import { initAudio, playBell, playStart, playStop, playSuccess } from '../utils/
 function getTimeOfDay() {
   const hour = new Date().getHours()
   if (hour >= 6 && hour < 12) return 'morning'
-  if (hour >= 12 && hour < 18) return 'day'
-  if (hour >= 18 && hour < 22) return 'evening'
+  if (hour >= 12 && hour < 17) return 'day'      // 17'ye çektik
+  if (hour >= 17 && hour < 20) return 'evening'  // 17-20 arası akşam
   return 'night'
 }
-
 const ST = { IDLE: 'idle', RUNNING: 'running', BREAK: 'break' }
 const SYNC_EVERY_MS = 30_000
 
@@ -149,6 +148,38 @@ export default function StudentDashboard() {
       snoozeRef.current = null
     }
   }
+
+  function startIdleWatch() {
+  dayWatchRef.current = setInterval(async () => {
+    void checkDayRollover()
+
+    if (modeRef.current !== ST.IDLE) return
+
+    try {
+      const fresh = await getDaily(dateKeyRef.current)
+      if (!fresh) return
+
+      const newTarget = fresh.target ?? TARGETS.full.seconds
+      const newSecs = fresh.totalSeconds || 0
+      const nowDone = newTarget > 0 ? newSecs >= newTarget : false
+
+      setTarget(newTarget)
+      setTargetType(fresh.targetType || 'full')
+      setSecs(newSecs)
+      runningRef.current.target = newTarget
+
+    if (nowDone) {
+  setDone(true)
+  const note = String(fresh?.dailyNote || '').trim()
+  if (!note && !showDailyNoteModal) {
+    setShowDailyNoteModal(true)
+  }
+}
+    } catch (err) {
+      console.error('idleWatch error:', err)
+    }
+  }, 1000)
+}
 
   async function maybeOpenDailyNoteModal(total, t) {
     if (t <= 0) return
@@ -276,9 +307,7 @@ export default function StudentDashboard() {
       } else {
         setMode(ST.IDLE)
         modeRef.current = ST.IDLE
-        dayWatchRef.current = setInterval(() => {
-          void checkDayRollover()
-        }, 1000)
+        startIdleWatch()
       }
     }
 
@@ -356,9 +385,7 @@ export default function StudentDashboard() {
 
       setMode(ST.IDLE)
       modeRef.current = ST.IDLE
-      dayWatchRef.current = setInterval(() => {
-        void checkDayRollover()
-      }, 1000)
+      startIdleWatch()
     } finally {
       setSaving(false)
     }
@@ -389,9 +416,7 @@ export default function StudentDashboard() {
 
     setMode(ST.BREAK)
     modeRef.current = ST.BREAK
-    dayWatchRef.current = setInterval(() => {
-      void checkDayRollover()
-    }, 1000)
+    startIdleWatch()
   }
 
   function handleSnooze() {
