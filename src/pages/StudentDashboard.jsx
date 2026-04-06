@@ -4,6 +4,7 @@ import BreakModal from '../components/BreakModal'
 import BreakScreen from '../components/BreakScreen'
 import CalendarView from '../components/CalendarView'
 import DailyNoteModal from '../components/DailyNoteModal'
+import KissEffect from '../components/KissEffect'
 import KpssCountdown from '../components/KpssCountdown'
 import WeatherEffects from '../components/WeatherEffects'
 import { useAuth } from '../context/AuthContext'
@@ -443,7 +444,8 @@ export default function StudentDashboard() {
       <header style={S.header}>
         <div style={S.headerTop}>
           <div style={S.greetWrap}>
-            <img src="/images/image.png" alt="Profil" style={S.avatar} />
+            {/* <img src="/images/image.png" alt="Profil" style={S.avatar} /> */}
+            <KissEffect />
             <div>
               <div style={S.greetText}>{greeting.text}</div>
               <div style={S.greetSub}>{greeting.sub}</div>

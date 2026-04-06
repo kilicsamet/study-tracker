@@ -112,7 +112,9 @@ export async function initDaily(key) {
 }
 
 export async function ensureDaily(key) {
-  return await initDaily(key)
+  const snap = await getDoc(dailyRef(key))
+  if (snap.exists()) return snap.data()
+  return await createDailyIfMissing(key)
 }
 
 export async function getDaily(key) {
