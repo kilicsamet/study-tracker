@@ -458,6 +458,32 @@ export default function StudentDashboard() {
   const C = 2 * Math.PI * R
   const targetLabel = TARGETS[targetType]?.label || TARGETS.full.label
 
+
+const [anniversaryModal, setAnniversaryModal] = useState({ isOpen: false, message: '' });
+
+useEffect(() => {
+    const today = new Date();
+    const day   = today.getDate();
+    const month = today.getMonth(); // 0-indexed
+    const year  = today.getFullYear();
+
+  if (day === 16) {
+    const startDate = new Date(2026, 0, 16);
+    const months    = (year - startDate.getFullYear()) * 12 + (month - startDate.getMonth());
+    setAnniversaryModal({
+        isOpen  : true,
+        message : `${months} ay önce hayatıma girdin ve o günden bu yana her şey değişti 🌸 Seninle gülmek, seninle konuşmak, seninle olmak... hepsi benim için çok kıymetli. Yanımda olduğun her an kendimi şanslı hissediyorum. Seni tanıdığım için çok mutluyum, iyi ki varsın 💫✨`,
+    });
+} else if (day === 28) {
+    const startDate = new Date(2026, 0, 28);
+    const months    = (year - startDate.getFullYear()) * 12 + (month - startDate.getMonth());
+    setAnniversaryModal({
+        isOpen  : true,
+        message : `${months}. ayımız kutlu olsun sevgilim 💕 Seninle geçirdiğim her gün, her an, her saniye hayatımın en güzel hediyesi. Seni sevmek bana ne kadar doğal geliyor, sanki hep böyleymiş gibi. Yanımda olduğun için, beni seçtiğin için, her şeyinle her halimle beni sevdiğin için teşekkür ederim. Seni çok ama çok seviyorum 🌹🥰✨`,
+    });
+}
+}, []);
+
   return (
     <div style={S.page}>
       <WeatherEffects weather={weather} time={timeOfDay} />
@@ -759,7 +785,57 @@ export default function StudentDashboard() {
         onClose={() => setShowDailyNoteModal(false)}
         onSave={handleSaveDailyNote}
       />
-    </div>
+
+      {anniversaryModal.isOpen && (
+            <div style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+            }}>
+                <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid rgba(232,130,154,.4)',
+                    borderRadius: '28px',
+                    padding: '40px 36px',
+                    maxWidth: '340px',
+                    width: '90%',
+                    textAlign: 'center',
+                    boxShadow: '0 20px 60px rgba(232,130,154,.2)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px',
+                }}>
+                    <div style={{ fontSize: '48px' }}>
+                        {anniversaryModal.message.includes('tanışalı') ? '🌸' : '💕'}
+                    </div>
+                    <p style={{
+                        fontSize: '18px',
+                        fontWeight: '700',
+                        color: 'var(--text)',
+                        lineHeight: 1.6,
+                    }}>
+                        {anniversaryModal.message}
+                    </p>
+                    <button
+                        onClick={() => setAnniversaryModal({ isOpen: false, message: '' })}
+                        style={{
+                            background: 'linear-gradient(135deg,var(--rose),#d4547a)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '14px',
+                            padding: '14px 28px',
+                            fontSize: '15px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 6px 20px var(--rose-glow)',
+                        }}
+                    >
+                        💖 Kapat
+                    </button>
+                </div>
+            </div>
+        )}
+        </div>
   )
 }
 
