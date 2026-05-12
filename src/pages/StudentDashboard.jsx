@@ -460,6 +460,11 @@ export default function StudentDashboard() {
 
 
 const [anniversaryModal, setAnniversaryModal] = useState({ isOpen: false, message: '' });
+const [nursesModal, setNursesModal] = useState(false)
+
+const nursesDay = new Date().getDate() === 12 && new Date().getMonth() === 4
+
+
 
 useEffect(() => {
     const today = new Date();
@@ -545,6 +550,14 @@ useEffect(() => {
                 {targetLabel}
               </span>
             </div>
+            {nursesModal === false && (() => {
+  const today = new Date()
+  return today.getDate() === 12 && today.getMonth() === 4
+})() && (
+  <button style={S.nursesBtn} onClick={() => setNursesModal(true)}>
+    👩‍⚕️ Beni Tıkla!
+  </button>
+)}
 
             {targetType === 'holiday' && (
               <div style={S.holidayBanner}>🏖 Bugün tatil günü! İyi dinlenmeler 💕</div>
@@ -835,7 +848,91 @@ useEffect(() => {
                 </div>
             </div>
         )}
+
+              {nursesDay && (
+  <>
+    {!nursesModal && (
+      <div style={{
+        position: 'fixed', bottom: '32px', right: '24px', zIndex: 500,
+      }}>
+        <button
+          onClick={() => setNursesModal(true)}
+          style={{
+            background: 'linear-gradient(135deg, #e8829a, #c96b8a)',
+            border: 'none',
+            borderRadius: '20px',
+            padding: '16px 24px',
+            fontSize: '22px',
+            cursor: 'pointer',
+            boxShadow: '0 8px 28px rgba(232,130,154,.45)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '4px',
+            animation: 'nursePulse 2s ease-in-out infinite',
+          }}
+        >
+          <span style={{ fontSize: '36px' }}>👩‍⚕️</span>
+          <span style={{ color: '#fff', fontSize: '12px', fontWeight: '700', letterSpacing: '.3px' }}>Beni Tıkla!</span>
+        </button>
+      </div>
+    )}
+
+    {nursesModal && (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+      }}>
+        <NursesFloaties />
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid rgba(232,130,154,.4)',
+          borderRadius: '28px',
+          padding: '40px 36px',
+          maxWidth: '360px',
+          width: '90%',
+          textAlign: 'center',
+          boxShadow: '0 20px 60px rgba(232,130,154,.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          position: 'relative',
+          zIndex: 2,
+        }}>
+          <div style={{ fontSize: '52px' }}>👩‍⚕️</div>
+          <div style={{
+            fontSize: '17px', fontWeight: '700',
+            color: 'var(--rose)', letterSpacing: '.2px',
+          }}>
+            🌸 Günün kutlu olsun, güzel hemşiremm!
+          </div>
+          <p style={{
+            fontSize: '15px', lineHeight: 1.75,
+            color: 'var(--text)', margin: 0,
+          }}>
+            Sadece bugün değil, her gün özelsin. Başkalarını iyi edeceğin günlerde gelecek, zaten şimdiden hayatımı güzelleştiriyorsun. Ellerinden öpüyorum, hemşireler günün kutlu olsun 💕
+          </p>
+          <button
+            onClick={() => setNursesModal(false)}
+            style={{
+              background: 'linear-gradient(135deg,var(--rose),#d4547a)',
+              color: '#fff', border: 'none',
+              borderRadius: '14px', padding: '14px 28px',
+              fontSize: '15px', fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: '0 6px 20px var(--rose-glow)',
+            }}
+          >
+            Sağ ol aşkım 💖
+          </button>
         </div>
+      </div>
+    )}
+  </>
+)}
+        </div>
+  
   )
 }
 
@@ -869,6 +966,22 @@ function Confetti() {
   )
 }
 
+function NursesFloaties() {
+  const items = ['🦋','🌸','🌺','🌷','✨','💐','🦋','🌸','💕','🌼','🦋','🌸']
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+      {items.map((it, i) => (
+        <span key={i} style={{
+          position: 'absolute',
+          left: `${(i * 8.5) % 100}%`,
+          top: '110%',
+          fontSize: `${18 + (i % 4) * 8}px`,
+          animation: `confetti ${2.5 + (i % 4) * 0.4}s ${i * 0.15}s ease-out forwards`,
+        }}>{it}</span>
+      ))}
+    </div>
+  )
+}
 const S = {
   page: { minHeight: '100vh', position: 'relative', overflow: 'hidden' },
 
@@ -1177,4 +1290,21 @@ const S = {
     display: 'flex',
     gap: '8px',
   },
+  nursesBtn: {
+  background: 'linear-gradient(135deg, #e8829a, #c96b8a)',
+  border: 'none',
+  borderRadius: '16px',
+  padding: '14px 20px',
+  fontSize: '15px',
+  fontWeight: '700',
+  color: '#fff',
+  cursor: 'pointer',
+  boxShadow: '0 6px 20px rgba(232,130,154,.4)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  width: '100%',
+  justifyContent: 'center',
+  animation: 'nursePulse 2s ease-in-out infinite',
+},
 }
