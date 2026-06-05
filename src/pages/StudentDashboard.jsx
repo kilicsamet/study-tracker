@@ -150,36 +150,36 @@ export default function StudentDashboard() {
   }
 
   function startIdleWatch() {
-  dayWatchRef.current = setInterval(async () => {
-    void checkDayRollover()
+    dayWatchRef.current = setInterval(async () => {
+      void checkDayRollover()
 
-    if (modeRef.current !== ST.IDLE) return
+      if (modeRef.current !== ST.IDLE) return
 
-    try {
-      const fresh = await getDaily(dateKeyRef.current)
-      if (!fresh) return
+      try {
+        const fresh = await getDaily(dateKeyRef.current)
+        if (!fresh) return
 
-      const newTarget = fresh.target ?? TARGETS.full.seconds
-      const newSecs = fresh.totalSeconds || 0
-      const nowDone = newTarget > 0 ? newSecs >= newTarget : false
+        const newTarget = fresh.target ?? TARGETS.full.seconds
+        const newSecs = fresh.totalSeconds || 0
+        const nowDone = newTarget > 0 ? newSecs >= newTarget : false
 
-      setTarget(newTarget)
-      setTargetType(fresh.targetType || 'full')
-      setSecs(newSecs)
-      runningRef.current.target = newTarget
+        setTarget(newTarget)
+        setTargetType(fresh.targetType || 'full')
+        setSecs(newSecs)
+        runningRef.current.target = newTarget
 
-    if (nowDone) {
-  setDone(true)
-  const note = String(fresh?.dailyNote || '').trim()
-  if (!note && !showDailyNoteModal) {
-    setShowDailyNoteModal(true)
+        if (nowDone) {
+          setDone(true)
+          const note = String(fresh?.dailyNote || '').trim()
+          if (!note && !showDailyNoteModal) {
+            setShowDailyNoteModal(true)
+          }
+        }
+      } catch (err) {
+        console.error('idleWatch error:', err)
+      }
+    }, 1000)
   }
-}
-    } catch (err) {
-      console.error('idleWatch error:', err)
-    }
-  }, 1000)
-}
 
   async function maybeOpenDailyNoteModal(total, t) {
     if (t <= 0) return
@@ -459,35 +459,45 @@ export default function StudentDashboard() {
   const targetLabel = TARGETS[targetType]?.label || TARGETS.full.label
 
 
-const [anniversaryModal, setAnniversaryModal] = useState({ isOpen: false, message: '' });
-const [nursesModal, setNursesModal] = useState(false)
+  const [anniversaryModal, setAnniversaryModal] = useState({ isOpen: false, message: '' });
+  const [nursesModal, setNursesModal] = useState(false)
 
-const nursesDay = new Date().getDate() === 12 && new Date().getMonth() === 4
+  const nursesDay = new Date().getDate() === 12 && new Date().getMonth() === 4
 
 
 
-useEffect(() => {
+  useEffect(() => {
     const today = new Date();
-    const day   = today.getDate();
+    const day = today.getDate();
     const month = today.getMonth(); // 0-indexed
-    const year  = today.getFullYear();
+    const year = today.getFullYear();
 
-  if (day === 16) {
-    const startDate = new Date(2026, 0, 16);
-    const months    = (year - startDate.getFullYear()) * 12 + (month - startDate.getMonth());
-    setAnniversaryModal({
-        isOpen  : true,
-        message : `${months} ay önce hayatıma girdin ve o günden bu yana her şey değişti 🌸 Seninle gülmek, seninle konuşmak, seninle olmak... hepsi benim için çok kıymetli. Yanımda olduğun her an kendimi şanslı hissediyorum. Seni tanıdığım için çok mutluyum, iyi ki varsın 💫✨`,
-    });
-} else if (day === 28) {
-    const startDate = new Date(2026, 0, 28);
-    const months    = (year - startDate.getFullYear()) * 12 + (month - startDate.getMonth());
-    setAnniversaryModal({
-        isOpen  : true,
-        message : `${months}. ayımız kutlu olsun sevgilim 💕 Seninle geçirdiğim her gün, her an, her saniye hayatımın en güzel hediyesi. Seni sevmek bana ne kadar doğal geliyor, sanki hep böyleymiş gibi. Yanımda olduğun için, beni seçtiğin için, her şeyinle her halimle beni sevdiğin için teşekkür ederim. Seni çok ama çok seviyorum 🌹🥰✨`,
-    });
-}
-}, []);
+    if (day === 16) {
+      const startDate = new Date(2026, 0, 16);
+      const months = (year - startDate.getFullYear()) * 12 + (month - startDate.getMonth());
+      setAnniversaryModal({
+        isOpen: true,
+        message: `${months} ay önce hayatıma girdin ve o günden bu yana her şey değişti 🌸 Seninle gülmek, seninle konuşmak, seninle olmak... hepsi benim için çok kıymetli. Yanımda olduğun her an kendimi şanslı hissediyorum. Seni tanıdığım için çok mutluyum, iyi ki varsın 💫✨`,
+      });
+    } else if (day === 28) {
+      const startDate = new Date(2026, 0, 28);
+      const months = (year - startDate.getFullYear()) * 12 + (month - startDate.getMonth());
+      setAnniversaryModal({
+        isOpen: true,
+        message: `${months}. ayımız kutlu olsun sevgilim 💕 Seninle geçirdiğim her gün, her an, her saniye hayatımın en güzel hediyesi. Seni sevmek bana ne kadar doğal geliyor, sanki hep böyleymiş gibi. Yanımda olduğun için, beni seçtiğin için, her şeyinle her halimle beni sevdiğin için teşekkür ederim. Seni çok ama çok seviyorum 🌹🥰✨`,
+      });
+    }
+  }, []);
+
+  const [apologyModal, setApologyModal] = useState(false);
+
+  useEffect(() => {
+    const key = 'apology_shown_2026_06_05';
+    if (!localStorage.getItem(key)) {
+      setApologyModal(true);
+      localStorage.setItem(key, '1');
+    }
+  }, []);
 
   return (
     <div style={S.page}>
@@ -543,21 +553,21 @@ useEffect(() => {
                     targetType === 'holiday'
                       ? 'var(--mint)'
                       : targetType === 'half'
-                      ? 'var(--gold)'
-                      : 'var(--rose)',
+                        ? 'var(--gold)'
+                        : 'var(--rose)',
                 }}
               >
                 {targetLabel}
               </span>
             </div>
             {nursesModal === false && (() => {
-  const today = new Date()
-  return today.getDate() === 12 && today.getMonth() === 4
-})() && (
-  <button style={S.nursesBtn} onClick={() => setNursesModal(true)}>
-    👩‍⚕️ Beni Tıkla!
-  </button>
-)}
+              const today = new Date()
+              return today.getDate() === 12 && today.getMonth() === 4
+            })() && (
+                <button style={S.nursesBtn} onClick={() => setNursesModal(true)}>
+                  👩‍⚕️ Beni Tıkla!
+                </button>
+              )}
 
             {targetType === 'holiday' && (
               <div style={S.holidayBanner}>🏖 Bugün tatil günü! İyi dinlenmeler 💕</div>
@@ -624,8 +634,8 @@ useEffect(() => {
                         done
                           ? 'var(--ok)'
                           : mode === ST.RUNNING
-                          ? 'var(--rose)'
-                          : 'var(--surface3)'
+                            ? 'var(--rose)'
+                            : 'var(--surface3)'
                       }
                       strokeWidth="14"
                       strokeDasharray={C}
@@ -673,8 +683,8 @@ useEffect(() => {
                           done
                             ? 'var(--ok)'
                             : mode === ST.RUNNING
-                            ? 'var(--text)'
-                            : 'var(--text2)',
+                              ? 'var(--text)'
+                              : 'var(--text2)',
                       }}
                     >
                       {fmtHMS(secs)}
@@ -684,8 +694,8 @@ useEffect(() => {
                       {mode === ST.RUNNING
                         ? '⏱ Çalışıyor'
                         : done
-                        ? '🏆 Hedef tamam'
-                        : '⏸ Bekliyor'}
+                          ? '🏆 Hedef tamam'
+                          : '⏸ Bekliyor'}
                     </div>
 
                     <div style={{ ...S.pctLabel, color: done ? 'var(--ok)' : 'var(--rose)' }}>
@@ -767,8 +777,8 @@ useEffect(() => {
                       background: done
                         ? 'linear-gradient(90deg,var(--ok),#5dd899)'
                         : pct >= 60
-                        ? 'linear-gradient(90deg,var(--gold),#f5d580)'
-                        : 'linear-gradient(90deg,var(--rose),#f0a0b5)',
+                          ? 'linear-gradient(90deg,var(--gold),#f5d580)'
+                          : 'linear-gradient(90deg,var(--rose),#f0a0b5)',
                     }}
                   />
 
@@ -800,141 +810,193 @@ useEffect(() => {
       />
 
       {anniversaryModal.isOpen && (
-            <div style={{
-                position: 'fixed', inset: 0, zIndex: 9999,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-            }}>
-                <div style={{
-                    background: 'var(--surface)',
-                    border: '1px solid rgba(232,130,154,.4)',
-                    borderRadius: '28px',
-                    padding: '40px 36px',
-                    maxWidth: '340px',
-                    width: '90%',
-                    textAlign: 'center',
-                    boxShadow: '0 20px 60px rgba(232,130,154,.2)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '20px',
-                }}>
-                    <div style={{ fontSize: '48px' }}>
-                        {anniversaryModal.message.includes('tanışalı') ? '🌸' : '💕'}
-                    </div>
-                    <p style={{
-                        fontSize: '18px',
-                        fontWeight: '700',
-                        color: 'var(--text)',
-                        lineHeight: 1.6,
-                    }}>
-                        {anniversaryModal.message}
-                    </p>
-                    <button
-                        onClick={() => setAnniversaryModal({ isOpen: false, message: '' })}
-                        style={{
-                            background: 'linear-gradient(135deg,var(--rose),#d4547a)',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '14px',
-                            padding: '14px 28px',
-                            fontSize: '15px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            boxShadow: '0 6px 20px var(--rose-glow)',
-                        }}
-                    >
-                        💖 Kapat
-                    </button>
-                </div>
-            </div>
-        )}
-
-              {nursesDay && (
-  <>
-    {!nursesModal && (
-      <div style={{
-        position: 'fixed', bottom: '32px', right: '24px', zIndex: 500,
-      }}>
-        <button
-          onClick={() => setNursesModal(true)}
-          style={{
-            background: 'linear-gradient(135deg, #e8829a, #c96b8a)',
-            border: 'none',
-            borderRadius: '20px',
-            padding: '16px 24px',
-            fontSize: '22px',
-            cursor: 'pointer',
-            boxShadow: '0 8px 28px rgba(232,130,154,.45)',
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+        }}>
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid rgba(232,130,154,.4)',
+            borderRadius: '28px',
+            padding: '40px 36px',
+            maxWidth: '340px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(232,130,154,.2)',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            gap: '4px',
-            animation: 'nursePulse 2s ease-in-out infinite',
-          }}
-        >
-          <span style={{ fontSize: '36px' }}>👩‍⚕️</span>
-          <span style={{ color: '#fff', fontSize: '12px', fontWeight: '700', letterSpacing: '.3px' }}>Beni Tıkla!</span>
-        </button>
-      </div>
-    )}
-
-    {nursesModal && (
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-      }}>
-        <NursesFloaties />
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid rgba(232,130,154,.4)',
-          borderRadius: '28px',
-          padding: '40px 36px',
-          maxWidth: '360px',
-          width: '90%',
-          textAlign: 'center',
-          boxShadow: '0 20px 60px rgba(232,130,154,.25)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px',
-          position: 'relative',
-          zIndex: 2,
-        }}>
-          <div style={{ fontSize: '52px' }}>👩‍⚕️</div>
-          <div style={{
-            fontSize: '17px', fontWeight: '700',
-            color: 'var(--rose)', letterSpacing: '.2px',
+            gap: '20px',
           }}>
-            🌸 Günün kutlu olsun, güzel hemşiremm!
+            <div style={{ fontSize: '48px' }}>
+              {anniversaryModal.message.includes('tanışalı') ? '🌸' : '💕'}
+            </div>
+            <p style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: 'var(--text)',
+              lineHeight: 1.6,
+            }}>
+              {anniversaryModal.message}
+            </p>
+            <button
+              onClick={() => setAnniversaryModal({ isOpen: false, message: '' })}
+              style={{
+                background: 'linear-gradient(135deg,var(--rose),#d4547a)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '14px',
+                padding: '14px 28px',
+                fontSize: '15px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px var(--rose-glow)',
+              }}
+            >
+              💖 Kapat
+            </button>
           </div>
-          <p style={{
-            fontSize: '15px', lineHeight: 1.75,
-            color: 'var(--text)', margin: 0,
+        </div>
+      )}
+
+      {nursesDay && (
+        <>
+          {!nursesModal && (
+            <div style={{
+              position: 'fixed', bottom: '32px', right: '24px', zIndex: 500,
+            }}>
+              <button
+                onClick={() => setNursesModal(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #e8829a, #c96b8a)',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '16px 24px',
+                  fontSize: '22px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 28px rgba(232,130,154,.45)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  animation: 'nursePulse 2s ease-in-out infinite',
+                }}
+              >
+                <span style={{ fontSize: '36px' }}>👩‍⚕️</span>
+                <span style={{ color: '#fff', fontSize: '12px', fontWeight: '700', letterSpacing: '.3px' }}>Beni Tıkla!</span>
+              </button>
+            </div>
+          )}
+
+          {nursesModal && (
+            <div style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+            }}>
+              <NursesFloaties />
+              <div style={{
+                background: 'var(--surface)',
+                border: '1px solid rgba(232,130,154,.4)',
+                borderRadius: '28px',
+                padding: '40px 36px',
+                maxWidth: '360px',
+                width: '90%',
+                textAlign: 'center',
+                boxShadow: '0 20px 60px rgba(232,130,154,.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                position: 'relative',
+                zIndex: 2,
+              }}>
+                <div style={{ fontSize: '52px' }}>👩‍⚕️</div>
+                <div style={{
+                  fontSize: '17px', fontWeight: '700',
+                  color: 'var(--rose)', letterSpacing: '.2px',
+                }}>
+                  🌸 Günün kutlu olsun, güzel hemşiremm!
+                </div>
+                <p style={{
+                  fontSize: '15px', lineHeight: 1.75,
+                  color: 'var(--text)', margin: 0,
+                }}>
+                  Sadece bugün değil, her gün özelsin. Başkalarını iyi edeceğin günlerde gelecek, zaten şimdiden hayatımı güzelleştiriyorsun. Ellerinden öpüyorum, hemşireler günün kutlu olsun 💕
+                </p>
+                <button
+                  onClick={() => setNursesModal(false)}
+                  style={{
+                    background: 'linear-gradient(135deg,var(--rose),#d4547a)',
+                    color: '#fff', border: 'none',
+                    borderRadius: '14px', padding: '14px 28px',
+                    fontSize: '15px', fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 6px 20px var(--rose-glow)',
+                  }}
+                >
+                  Sağ ol aşkım 💖
+                </button>
+              </div>
+            </div>
+          )}
+
+        </>
+      )}
+
+
+      {apologyModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(10px)',
+        }}>
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid rgba(232,130,154,.4)',
+            borderRadius: '28px',
+            padding: '40px 36px',
+            maxWidth: '340px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(232,130,154,.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
           }}>
-            Sadece bugün değil, her gün özelsin. Başkalarını iyi edeceğin günlerde gelecek, zaten şimdiden hayatımı güzelleştiriyorsun. Ellerinden öpüyorum, hemşireler günün kutlu olsun 💕
-          </p>
-          <button
-            onClick={() => setNursesModal(false)}
-            style={{
-              background: 'linear-gradient(135deg,var(--rose),#d4547a)',
-              color: '#fff', border: 'none',
-              borderRadius: '14px', padding: '14px 28px',
-              fontSize: '15px', fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 6px 20px var(--rose-glow)',
-            }}
-          >
-            Sağ ol aşkım 💖
-          </button>
+            <div style={{ fontSize: '52px' }}>🥺</div>
+            <p style={{
+              fontSize: '16px',
+              fontWeight: '700',
+              color: 'var(--text)',
+              lineHeight: 1.7,
+              margin: 0,
+            }}>
+              Seni kırdığım için, anlayışsız davrandığım için çok özür dilerim. 💔
+            </p>
+            <button
+              onClick={() => setApologyModal(false)}
+              style={{
+                background: 'linear-gradient(135deg,var(--rose),#d4547a)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '14px',
+                padding: '14px 28px',
+                fontSize: '15px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px var(--rose-glow)',
+              }}
+            >
+              Tamam Affettim Aşkuşummm 💕
+            </button>
+          </div>
         </div>
-      </div>
-    )}
-  </>
-)}
-        </div>
-  
+      )}
+
+    </div>
   )
 }
+
 
 function Confetti() {
   const EMOJIS = ['⭐', '🌸', '✨', '💫', '🎉', '🏆', '💕', '🌟']
@@ -967,7 +1029,7 @@ function Confetti() {
 }
 
 function NursesFloaties() {
-  const items = ['🦋','🌸','🌺','🌷','✨','💐','🦋','🌸','💕','🌼','🦋','🌸']
+  const items = ['🦋', '🌸', '🌺', '🌷', '✨', '💐', '🦋', '🌸', '💕', '🌼', '🦋', '🌸']
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
       {items.map((it, i) => (
@@ -1291,20 +1353,20 @@ const S = {
     gap: '8px',
   },
   nursesBtn: {
-  background: 'linear-gradient(135deg, #e8829a, #c96b8a)',
-  border: 'none',
-  borderRadius: '16px',
-  padding: '14px 20px',
-  fontSize: '15px',
-  fontWeight: '700',
-  color: '#fff',
-  cursor: 'pointer',
-  boxShadow: '0 6px 20px rgba(232,130,154,.4)',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  width: '100%',
-  justifyContent: 'center',
-  animation: 'nursePulse 2s ease-in-out infinite',
-},
+    background: 'linear-gradient(135deg, #e8829a, #c96b8a)',
+    border: 'none',
+    borderRadius: '16px',
+    padding: '14px 20px',
+    fontSize: '15px',
+    fontWeight: '700',
+    color: '#fff',
+    cursor: 'pointer',
+    boxShadow: '0 6px 20px rgba(232,130,154,.4)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    width: '100%',
+    justifyContent: 'center',
+    animation: 'nursePulse 2s ease-in-out infinite',
+  },
 }
